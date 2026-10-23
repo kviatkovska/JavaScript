@@ -1,0 +1,70 @@
+// Цей рядок читає вхідні дані — не змінюй його. lines[0] — перший рядок, lines[1] — другий і т. д.
+const lines = require("fs").readFileSync(0, "utf8").trim().split("\n");
+const limitParts = lines[0].split(" ");
+const expenses = lines.slice(1).map((line) => {
+  const p = line.split(" ");
+  return { date: p[0], category: p[1], amount: Number(p[2]), note: p.slice(3).join(" ") };
+});
+
+// TODO: перший рядок — ліміти: «категорія сума категорія сума ...». Далі — витрати.
+// 1) Для кожної категорії з лімітом (у порядку першого рядка): food: 2750.00 / 3000.00 (91%)
+// — відсоток = Math.floor(spent * 100 / limit); якщо витрачено більше ліміту — fun: 1200.00 / 1000.00 OVER by 200.00.
+// 2) Категорії без ліміту, за абеткою: gifts: 150.00 (no limit).
+// 3) Total: <усі витрати>. 4) Biggest: <дата> <категорія> <сума> <нотатка> (при рівності — перша).
+// 5) Busiest day: <дата> (<N> expenses) — день з найбільшою кількістю витрат, при рівності — раніший.
+// Розбий розв'язок на функції: так його легше перевіряти частинами.
+const limits = {};
+const limitOrder = [];
+for (let i = 0; i < limitParts.length; i += 2) {
+  limits[limitParts[i]] = Number(limitParts[i + 1]);
+  limitOrder.push(limitParts[i]);
+}
+
+const spent = {};
+const perDay = {};
+let total = 0;
+let biggest = null;
+
+for (const e of expenses) {
+  spent[e.category] = (spent[e.category] || 0) + e.amount;
+  perDay[e.date] = (perDay[e.date] || 0) + 1;
+  total += e.amount;
+  if (biggest === null || e.amount > biggest.amount) {
+    biggest = e;
+  }
+}
+
+for (const category of limitOrder) {
+  const used = spent[category] || 0;
+  const limit = limits[category];
+  if (used > limit) {
+    console.log(`${category}: ${used.toFixed(2)} / ${limit.toFixed(2)} OVER by ${(used - limit).toFixed(2)}`);
+  } else {
+    const percent = Math.floor((used * 100) / limit);
+    console.log(`${category}: ${used.toFixed(2)} / ${limit.toFixed(2)} (${percent}%)`);
+  }
+}
+
+const noLimit = Object.keys(spent)
+  .filter((category) => limits[category] === undefined)
+  .sort();
+for (const category of noLimit) {
+  console.log(`${category}: ${spent[category].toFixed(2)} (no limit)`);
+}
+
+console.log(`Total: ${total.toFixed(2)}`);
+
+if (biggest !== null) {
+  console.log(`Biggest: ${biggest.date} ${biggest.category} ${biggest.amount.toFixed(2)} ${biggest.note}`);
+}
+
+const days = Object.keys(perDay).sort();
+let busiest = days[0];
+for (const day of days) {
+  if (perDay[day] > perDay[busiest]) {
+    busiest = day;
+  }
+}
+if (busiest !== undefined) {
+  console.log(`Busiest day: ${busiest} (${perDay[busiest]} expenses)`);
+}
