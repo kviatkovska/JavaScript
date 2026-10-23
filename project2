@@ -1,0 +1,64 @@
+// Цей рядок читає вхідні дані — не змінюй його. lines[0] — перший рядок, lines[1] — другий і т. д.
+const lines = require("fs").readFileSync(0, "utf8").trim().split("\n");
+const key = lines[0];
+const rows = lines.slice(1);
+
+// TODO: key — рядок правильних відповідей тесту (наприклад ABCDA). Далі рядки «ім'я відповіді»,
+// де «-» — пропущене питання. Якщо довжина відповідей не збігається з key, функція оцінювання
+// має кинути помилку, а програма — надрукувати invalid: <ім'я> і пропустити студента.
+// Решту студентів надрукуй за спаданням балів, при рівності — за іменем:
+// Anna: 4/5 (80%) PASS — відсоток = Math.floor(бали * 100 / кількість питань); PASS від 60%, інакше FAIL.
+// Останній рядок: Hardest: question <номер з 1> (<скільки правильних> of <скільки валідних студентів>)
+// — питання з найменшою кількістю правильних відповідей, при рівності — з меншим номером.
+
+function grade(answers) {
+  if (answers.length !== key.length) {
+    throw new Error("length mismatch");
+  }
+  let score = 0;
+  for (let i = 0; i < key.length; i++) {
+    if (answers[i] === key[i]) {
+      score++;
+    }
+  }
+  return score;
+}
+
+const students = [];
+const correctPerQuestion = new Array(key.length).fill(0);
+
+for (let i = 1; i < lines.length; i++) {
+  const [name, answers] = lines[i].trim().split(" ");
+  try {
+    const score = grade(answers);
+    students.push({ name, score });
+    for (let q = 0; q < key.length; q++) {
+      if (answers[q] === key[q]) {
+        correctPerQuestion[q]++;
+      }
+    }
+  } catch (e) {
+    console.log(`invalid: ${name}`);
+  }
+}
+
+students.sort((a, b) => {
+  if (b.score !== a.score) {
+    return b.score - a.score;
+  }
+  return a.name < b.name ? -1 : 1;
+});
+
+for (const s of students) {
+  const percent = Math.floor((s.score * 100) / key.length);
+  const result = percent >= 60 ? "PASS" : "FAIL";
+  console.log(`${s.name}: ${s.score}/${key.length} (${percent}%) ${result}`);
+}
+
+let hardest = 0;
+for (let q = 1; q < key.length; q++) {
+  if (correctPerQuestion[q] < correctPerQuestion[hardest]) {
+    hardest = q;
+  }
+}
+console.log(`Hardest: question ${hardest + 1} (${correctPerQuestion[hardest]} of ${students.length})`);
